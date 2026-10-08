@@ -194,6 +194,7 @@ main[data-mode="view"] .markdown-body { margin-top: 40px; }
 .notes li:hover { background: var(--bg-soft); }
 .notes a { color: var(--text); font-weight: 500; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notes a:hover { color: var(--accent); }
+.foot { font-size: 13px; margin-top: 32px; }
 .login { max-width: 360px; margin: 18vh auto; padding: 28px; display: grid; gap: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--paper-shadow); }
 .login h1 { margin: 0; }
 .login input { font: inherit; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); }

@@ -22,7 +22,8 @@ at once, with LaTeX math that renders as you write. It runs on your own server, 
 [Keeping secrets out of git](#keeping-secrets-out-of-git) ·
 [Development](#development-and-tests) ·
 [Roadmap](#roadmap) ·
-[FAQ](#faq)
+[FAQ](#faq) ·
+[License](#license)
 
 ---
 
@@ -385,5 +386,21 @@ It is designed for a research group and has been tested with up to four people i
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by the author for now. Add a `LICENSE` file before
-inviting others to reuse or contribute.
+Copyright © 2026 sourasb05.
+
+MdShare is free software, released under the **[GNU Affero General Public License v3.0 or later](LICENSE)** (AGPL-3.0-or-later).
+
+In plain words (the [LICENSE](LICENSE) text is what counts):
+
+- ✅ You may use, study, change and share MdShare, including for commercial purposes and inside your organisation.
+- ✅ You may run it for your group, department or customers.
+- 🔁 If you **modify** MdShare and let other people use it over a network, you must offer them the source code
+  of your modified version under the same licence. The **Source code** link on the home page helps with this.
+- 🔁 If you distribute copies, keep the licence and copyright notices.
+- ❌ There is no warranty.
+
+For a licence on different terms (e.g. a closed-source commercial deployment), contact the author through GitHub.
+
+Third-party components keep their own licences: almost all are MIT, ISC, BSD or Apache-2.0, DOMPurify is
+MPL-2.0/Apache-2.0, and the bundled web fonts (Inter, Source Serif 4, Literata, JetBrains Mono, Atkinson
+Hyperlegible) are under the SIL Open Font License 1.1. All are compatible with the AGPL.

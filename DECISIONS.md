@@ -47,3 +47,8 @@
   `data/` and any `*.sqlite*`, build output and test screenshots; commits use the GitHub noreply email.
   Added SECURITY.md (private vulnerability reporting). README now combines the product overview and the
   technical guide; screenshots live in docs/images/.
+- 2026-10-08 — License: GNU AGPL-3.0-or-later. Keeps the public code open while stopping closed hosted
+  forks (modified network deployments must share their source), and leaves the author free to sell
+  hosting or dual-license. All ~200 dependencies are permissive (MIT/ISC/BSD/Apache/MPL-or-Apache, fonts
+  OFL-1.1) and AGPL-compatible. Home page links to the source code (AGPL §13). package.json stays
+  "private" so it is never published to npm by accident.
