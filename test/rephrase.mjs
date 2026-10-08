@@ -1,15 +1,12 @@
 // AI rephrase: route access checks + a two-browser end-to-end run against a fake Anthropic API
 // (no real API key or cost). Usage: npm run build && node test/rephrase.mjs
-import { spawn } from "node:child_process";
 import http from "node:http";
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { chromium } from "playwright";
+import { startServer, signInFetch, signInBrowser, tempDir } from "./helpers.mjs";
 
 const MOCK_PORT = 3998, PORT = 3997, BASE = `http://localhost:${PORT}`;
-const PASSWORD = "correct-horse-battery";
-const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "mdshare-ai-"));
+const DATA_DIR = tempDir("mdshare-ai-");
 const results = [];
 const check = (name, ok, detail = "") => results.push({ name, ok: !!ok, ...(ok ? {} : { detail: String(detail) }) });
 
@@ -35,31 +32,18 @@ const mock = http.createServer((req, res) => {
 });
 await new Promise((r) => mock.listen(MOCK_PORT, "127.0.0.1", r));
 
-function start(env) {
-  const p = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, GROUP_PASSWORD: PASSWORD, ANTHROPIC_API_KEY: "", ...env },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let out = "";
-  p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (out += d));
-  return new Promise((resolve, reject) => {
-    p.stdout.on("data", () => out.includes("MdShare running") && resolve(p));
-    p.on("exit", (code) => reject(new Error(`server exited ${code}: ${out}`)));
-  });
-}
-const stop = (p) => new Promise((r) => { p.on("exit", r); p.kill(); });
+const start = (env) => startServer({ PORT: String(PORT), DATA_DIR, ALLOWED_DOMAINS: "lab.test", PUBLIC_URL: BASE, ...env }).ready;
+const stop = (srv) => srv.stop();
 const ORIGIN = { Origin: BASE };
 const get = (url, headers = {}) => fetch(BASE + url, { headers, redirect: "manual" });
 const rephrase = (body, headers = {}) => fetch(BASE + "/api/rephrase", {
   method: "POST", headers: { "Content-Type": "application/json", ...ORIGIN, ...headers }, body: JSON.stringify(body), redirect: "manual",
 });
-async function login() {
-  const r = await fetch(BASE + "/login", { method: "POST", body: `password=${PASSWORD}`, headers: { "Content-Type": "application/x-www-form-urlencoded", ...ORIGIN }, redirect: "manual" });
-  return { Cookie: (r.headers.get("set-cookie") || "").split(";")[0] };
-}
+let srv;
+const login = async (email = "ann@lab.test") => ({ Cookie: await signInFetch(BASE, srv, email) });
 
 // 1. No API key: feature reports itself off
-let srv = await start({});
+srv = await start({});
 let H = await login();
 check("without a key, /api/ai says off", (await (await get("/api/ai", H)).json()).rephrase === false);
 check("without a key, rephrase returns 503", (await rephrase({ text: "hello" }, H)).status === 503);
@@ -89,18 +73,16 @@ check("refusal reported as 422", (await rephrase({ text: "REFUSE this" }, H)).st
 
 // 3. Browser: select, rephrase, replace; Bob sees it; undo works; concurrent edit is detected
 const browser = await chromium.launch();
-async function person() {
+async function person(email) {
   const page = await (await browser.newContext()).newPage();
-  await page.goto(`${BASE}/login`);
-  await page.fill("input[name=password]", PASSWORD);
-  await page.click("button[type=submit]");
-  await page.waitForURL(`${BASE}/`);
+  await signInBrowser(page, BASE, srv, email);
   return page;
 }
-const A = await person(), B = await person();
+const A = await person("alice@lab.test"), B = await person("bob@lab.test");
 const errors = [];
 for (const p of [A, B]) p.on("pageerror", (e) => errors.push(e.message));
 await A.goto(`${BASE}/new`);
+await A.evaluate((id) => fetch(`/api/notes/${id}/share`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ share_mode: "link_edit" }) }), new URL(A.url()).pathname.split("/").pop());
 await B.goto(A.url());
 for (const p of [A, B]) await p.waitForFunction(() => window.__mdshare?.provider.isSynced);
 const ORIGINAL = "# Test\n\nThe results was good and we liked it.\n";

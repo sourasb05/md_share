@@ -3,20 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Log in · MdShare</title>
+<title>Sign in · MdShare</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <script src="/assets/theme.js"></script>
 <link rel="stylesheet" href="/assets/fonts/fonts.css">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body class="home-page">
-<form class="login" method="post">
-  <h1>MdShare</h1>
-  <p class="muted">Enter the group password.</p>
-  <input type="password" name="password" autocomplete="current-password" autofocus required aria-label="Group password">
-  <button class="primary" type="submit">Log in</button>
-  <p class="error" id="err" hidden>Wrong password.</p>
-</form>
+<main class="login">
+  <span class="logo" aria-hidden="true">M↓</span>
+  <h1>Sign in to MdShare</h1>
+  <p class="muted" id="domains">Use your work email address.</p>
+  <p class="notice" id="sent" role="status" hidden></p>
+  <p class="error" id="err" role="alert" hidden></p>
+  <form method="post" action="/auth/email" class="login-form">
+    <label for="email" class="sr-only">Email address</label>
+    <input type="email" id="email" name="email" autocomplete="email" placeholder="you@your-university.edu" required autofocus>
+    <input type="hidden" name="next" id="next" value="/">
+    <button class="primary" type="submit" id="send">Email me a sign-in link</button>
+  </form>
+  <div id="github-wrap" hidden>
+    <div class="or"><span>or</span></div>
+    <a class="button github" id="github" href="/auth/github">
+      <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" stroke="none" d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2z"/></svg>
+      Continue with GitHub
+    </a>
+  </div>
+</main>
 <script src="/assets/login.js"></script>
 </body>
 </html>

@@ -56,6 +56,7 @@ The core user is a **research group of 5–40 people** that meets weekly and kee
 | | |
 | --- | --- |
 | **Write together, live** | Everyone edits the same note at once, and changes merge automatically, with no "someone else is editing" locks. Named, coloured cursors show who is where, plus a count of who's online. Short connection drops are fine: edits sync when you reconnect. |
+| **Share deliberately** | Everyone signs in with their own account (email link or GitHub). New notes are private; share them with named people as viewer, editor or owner, or open them to everyone signed in, read-only or editable. **My notes** and **Shared with me** keep it all findable. |
 | **Math that renders as you type** | Inline `$…$` and display `$$…$$` LaTeX, typeset by KaTeX. Edit, side-by-side or reading view. Code blocks with syntax colouring. |
 | **A formatting toolbar** | Headings, bold, italic, strikethrough, code, lists, quotes, links, tables and equations, with keyboard shortcuts. Everything is undoable with Ctrl+Z. |
 | **Text colour and highlights** | 10 preset colours or any custom colour. Everyone sees them, and they stay in the downloaded file. |
@@ -111,7 +112,7 @@ Every request passes several independent checks, and every note is cleaned befor
 flowchart LR
   subgraph access["Who gets in"]
     direction LR
-    B["Browser"] --> H["HTTPS"] --> O{{"Same-site check<br/>blocks other websites"}} --> T{{"Login throttle<br/>5 tries / 15 min"}} --> S{{"Session check<br/>7 days, revocable"}} --> N["Notes<br/>pages + live sync"]
+    B["Browser"] --> H["HTTPS"] --> O{{"Same-site check<br/>blocks other websites"}} --> T{{"Personal sign-in<br/>your domain only"}} --> S{{"Session check<br/>7 days, revocable"}} --> R{{"Note access<br/>owner / editor / viewer"}} --> N["Notes<br/>pages + live sync"]
   end
   subgraph content["What a note can do"]
     direction LR
@@ -121,9 +122,12 @@ flowchart LR
 
 **Protected today**
 
-- **Private by default.** Without a password the server only accepts connections from the computer it runs on. It refuses to go on a network without a password of at least 12 characters.
-- **Revocable logins.** Sessions are stored on the server, and only a SHA-256 hash of each token is kept. Logging out instantly disconnects open editors, and changing the password logs everyone out.
-- **Password guessing is slowed:** after 5 wrong attempts, that address is blocked for 15 minutes.
+- **Personal sign-in, your domain only.** People sign in with a one-time email link or with GitHub, and only verified addresses at your allowed domains get in. No passwords are stored. Without sign-in configured, the server only accepts connections from the computer it runs on.
+- **Private by default, shared on purpose.** New notes are private to their owner. Owners add people as viewer, editor or owner, or open the note to everyone signed in, read-only or editable. Every page, API call and live connection checks this.
+- **Viewers really can't edit.** The server marks viewers' live connections read-only and discards any edit they send, even from a modified browser.
+- **Changes apply instantly.** Removing someone, or making a note private, disconnects their open editor at once; promoting them reconnects them with the new rights.
+- **Revocable sessions.** Sessions are stored on the server (only a SHA-256 hash of each token). Signing out disconnects open editors, and removing a domain from the allowlist locks its users out.
+- **Abuse limits.** Sign-in links work once, expire after 15 minutes and survive mail scanners. Sign-in emails are rate-limited per address and per network address.
 - **Other websites can't act for you.** Changes and live (WebSocket) connections are only accepted from MdShare's own pages, checked with the `Origin` header.
 - **Notes can't attack readers.** HTML in notes passes through DOMPurify and a strict Content-Security-Policy: no scripts, forms, iframes or outside images, and only `color`/`background-color` styles.
 - **Hardened deployment.** The Docker image runs as a non-root user with a read-only filesystem and no Linux capabilities. Behind HTTPS, cookies become `__Host-` + `Secure` and HSTS is sent.
@@ -131,13 +135,15 @@ flowchart LR
 
 **Not covered yet**
 
-- **One shared group password.** Everyone with it can read and edit every note. Personal sign-in and per-note roles are the next milestone (M4).
+- **Domain-wide trust.** Anyone with a verified address at an allowed domain can sign in and create notes. They can only see notes shared with them, but there is no admin panel yet to block one person (remove their sessions or narrow the domain list).
 - **No version history yet.** Back up the database file regularly.
 - **HTTPS is your hosting's job.** Use the included Caddy setup, and never expose MdShare on a network without HTTPS.
 - **Not yet independently audited or load-tested at scale.**
 
-**Tested:** 33/33 security checks (logged-out access, forged cookies, cross-site requests, injected HTML,
-throttling), 23/23 formatting and colour checks, 23/23 AI-rephrase checks, and a two-browser co-editing test.
+**Tested:** 46/46 access checks (sign-in, private notes over HTTP and WebSocket, viewers' edits rejected, live
+revocation, link sharing, GitHub), 37/37 security checks (signed-out access, forged cookies, cross-site requests,
+open redirects, injected HTML, throttling), 23/23 formatting checks, 23/23 AI-rephrase checks, and a two-browser
+co-editing test.
 
 Found a problem? Please report it privately; see [SECURITY.md](SECURITY.md).
 
@@ -162,7 +168,7 @@ low-cost cloud server. Notes stay on that server and download as plain `.md` fil
 | Server footprint | One process and one SQLite database file. A small virtual machine is enough for a group |
 | Real-time engine | [Yjs](https://yjs.dev) via [Hocuspocus](https://tiptap.dev/hocuspocus) over WebSocket |
 | Editor and rendering | CodeMirror 6 · markdown-it · KaTeX · DOMPurify |
-| Access control | Group password, server-side sessions (7 days), login throttling, Origin checks |
+| Access control | Personal sign-in (email link or GitHub) limited to your domains; per-note owner / editor / viewer roles and private / view / edit links; server-side sessions; Origin checks |
 | AI (optional) | Anthropic Claude via your own API key. Off by default |
 | Data portability | Every note downloads as Markdown; all notes live in one file you can back up |
 | Clients | Modern desktop and mobile browsers (tested in Chromium) |
@@ -230,8 +236,9 @@ npm run build
 npm start              # → http://localhost:3000
 ```
 
-Open the same note in two browser windows to see live co-editing. Without a password the server only listens on
-this computer (`127.0.0.1`), so nobody else on the network can reach it. Stop the server with Ctrl+C.
+Open the same note in two browser windows to see live co-editing. Without sign-in configured, MdShare runs in
+**local mode**: no accounts, and the server only listens on this computer (`127.0.0.1`), so nobody else on the
+network can reach it. Stop the server with Ctrl+C.
 
 ### Troubleshooting
 
@@ -240,29 +247,70 @@ this computer (`127.0.0.1`), so nobody else on the network can reach it. Stop th
 | `command not found: node` / `'node' is not recognized` | Node.js isn't installed or the terminal was opened before installing. Install it (above) and open a new terminal |
 | The page loads but the editor is blank | You skipped `npm run build`. Run it, then restart with `npm start` |
 | `EADDRINUSE: address already in use` | Something else uses port 3000. Start on another port: `PORT=3001 npm start` (Windows PowerShell: `$env:PORT=3001; npm start`) |
-| `GROUP_PASSWORD must be at least 12 characters.` | Choose a longer password |
-| `Refusing to listen on 0.0.0.0 without GROUP_PASSWORD` | Sharing on a network requires a password. Set `GROUP_PASSWORD` as shown below |
+| `Refusing to listen on 0.0.0.0 without ALLOWED_DOMAINS` | Sharing on a network requires sign-in. Set `ALLOWED_DOMAINS` as shown below |
+| The sign-in email never arrives | Without `SMTP_URL` the link is printed in the server's terminal instead. With SMTP, check the server log for "sending sign-in email failed" and your spam folder |
+| "Your GitHub account has no verified email address at an allowed domain" | Add and verify your university address under GitHub → Settings → Emails, or sign in by email |
 | `npm install` fails while building `better-sqlite3` | Prebuilt files weren't available for your system. Install build tools and retry: macOS `xcode-select --install`, Ubuntu `sudo apt-get install -y build-essential python3`, Windows the "Desktop development with C++" workload of Visual Studio Build Tools |
 
 On **Windows PowerShell**, set variables like this instead of `NAME=value npm start`:
 
 ```powershell
-$env:GROUP_PASSWORD='choose-a-long-password'; $env:HOST='0.0.0.0'; npm start
+$env:ALLOWED_DOMAINS='your-uni.edu'; $env:HOST='0.0.0.0'; $env:PUBLIC_URL='https://notes.your-lab.org'; npm start
 ```
 
 ## Run it for your group
 
-Set a group password (at least 12 characters) so only your group can open notes:
+Everyone signs in personally, and only verified addresses at your domain(s) can join:
 
 ```bash
-GROUP_PASSWORD='choose-a-long-password' HOST=0.0.0.0 npm start
+ALLOWED_DOMAINS=your-uni.edu PUBLIC_URL=https://notes.your-lab.org HOST=0.0.0.0 npm start
 ```
+
+`ALLOWED_DOMAINS` also admits subdomains (`cs.your-uni.edu`). List several with commas: `uni.edu,partner.org`.
+
+### Sign-in by email link
+
+Set `SMTP_URL` and `MAIL_FROM` so MdShare can email one-time sign-in links, e.g. your university's mail server or
+a transactional email service:
+
+```bash
+SMTP_URL='smtps://user:password@smtp.your-uni.edu:465'
+MAIL_FROM='MdShare <notes@your-lab.org>'
+```
+
+Without `SMTP_URL`, links are printed in the server's terminal instead, which is handy for trying it out.
+
+### Sign-in with GitHub (optional)
+
+1. On GitHub, open **Settings → Developer settings → OAuth Apps → New OAuth App**.
+2. Set **Homepage URL** to your `PUBLIC_URL` and **Authorization callback URL** to `PUBLIC_URL/auth/github/callback`
+   (e.g. `https://notes.your-lab.org/auth/github/callback`).
+3. Copy the **Client ID**, generate a **Client secret**, and set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+
+MdShare only asks GitHub for the account's email addresses, and lets people in only with a **verified** address at
+an allowed domain. Email and GitHub sign-in lead to the same account when the address matches.
+
+### Sharing
+
+New notes are **private**. In a note, **Share** lets the owner:
+
+- add people by email as **Can view**, **Can edit** or **Owner** (they can be added before they ever sign in), and
+- set general access: only people added, **anyone signed in with the link can view**, or **can edit**.
+
+Notes others share with you, or that you open from a shared link, appear under **Shared with me** on the home page.
+Notes created before sign-in existed stay editable by everyone signed in. To give them all to one person, start the
+server once with `OWNER_FOR_EXISTING_NOTES=name@your-uni.edu`.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PORT` | 3000 | HTTP + WebSocket port |
-| `HOST` | `127.0.0.1` | Address to listen on. Anything other than localhost requires `GROUP_PASSWORD` |
-| `GROUP_PASSWORD` | (empty = no login) | Shared password for the group, 12+ characters. Changing it logs everyone out |
+| `HOST` | `127.0.0.1` | Address to listen on. Anything other than localhost requires `ALLOWED_DOMAINS` |
+| `ALLOWED_DOMAINS` | (empty = local mode) | Comma-separated email domains whose verified addresses may sign in (subdomains included) |
+| `PUBLIC_URL` | `http://localhost:PORT` | The address people use, e.g. `https://notes.your-lab.org`. Used in sign-in links and the GitHub callback |
+| `SMTP_URL` | (empty = print links) | Mail server for sign-in emails, e.g. `smtps://user:pass@smtp.host:465` |
+| `MAIL_FROM` | — | Sender for sign-in emails (required with `SMTP_URL`) |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | (empty = off) | Turn on "Continue with GitHub" |
+| `OWNER_FOR_EXISTING_NOTES` | — | One-off: give notes that have no owner to this address |
 | `TRUST_PROXY` | `loopback` | Which reverse proxies may set `X-Forwarded-For/Proto` ([Express syntax](https://expressjs.com/en/guide/behind-proxies.html)) |
 | `DATA_DIR` | `./data` | Where `mdshare.sqlite` lives. Back this folder up |
 | `ANTHROPIC_API_KEY` | (empty = AI off) | Turns on **Rephrase**. Get a key at console.anthropic.com |
@@ -272,7 +320,7 @@ GROUP_PASSWORD='choose-a-long-password' HOST=0.0.0.0 npm start
 ### With Docker (recommended on a server)
 
 ```bash
-cp .env.example .env      # then set the password (and the API key, if you want AI)
+cp .env.example .env      # then set ALLOWED_DOMAINS, PUBLIC_URL and the mail settings
 mkdir -p data && sudo chown 1000:1000 data   # the container runs as an unprivileged user
 docker compose up -d --build
 ```
@@ -291,11 +339,11 @@ This repository is public. Secrets and data are kept out by [`.gitignore`](.giti
 
 | Never commit | Why | Where it belongs |
 | --- | --- | --- |
-| `.env` | Holds `GROUP_PASSWORD` and `ANTHROPIC_API_KEY`. A leaked API key can run up charges on your account | Copy from `.env.example` on the server only |
-| `data/`, `*.sqlite` | Everyone's notes, login sessions and the password fingerprint | The server's disk, plus your backups |
+| `.env` | Holds the SMTP password, the GitHub client secret and `ANTHROPIC_API_KEY`. A leaked API key can run up charges on your account | Copy from `.env.example` on the server only |
+| `data/`, `*.sqlite` | Everyone's notes, accounts, sharing settings and sessions | The server's disk, plus your backups |
 | Build output (`public/editor.js`, `public/chunks/`, `public/fonts/`…) | Recreated by `npm run build` | — |
 
-If a key is ever pushed by mistake, **revoke it immediately** at console.anthropic.com. Deleting the commit
+If a secret is ever pushed by mistake, **revoke it immediately** (API key at console.anthropic.com, GitHub client secret in the OAuth app, SMTP password with your mail provider). Deleting the commit
 is not enough, because public history is copied quickly. GitHub secret scanning and push protection are
 enabled on this repository as a second line of defence.
 
@@ -325,7 +373,8 @@ npm run build
 npm start                           # terminal 1
 npm test                            # terminal 2: two browsers type into one note at once
 npm run test:formatting             # toolbar, colours, highlights, appearance (needs npm start)
-npm run test:security               # starts its own server and tries to break in (33 checks)
+npm run test:access                 # sign-in, sharing, viewers can't edit (46 checks, own server + fake GitHub)
+npm run test:security               # starts its own server and tries to break in (37 checks)
 npm run test:rephrase               # AI rephrase against a fake Claude API (no key, no cost)
 ```
 
@@ -348,11 +397,11 @@ data/              SQLite database (created on first run, never committed)
 | Milestone | Status |
 | --- | --- |
 | M1–M2 Editor, live preview, LaTeX math, real-time sync, cursors, who's online | ✅ Done |
-| M3 Saving (SQLite), restart-safe, group password, Docker | ✅ Done |
+| M3 Saving (SQLite), restart-safe, Docker | ✅ Done |
 | Security hardening: revocable sessions, throttling, same-site checks, stricter sanitising | ✅ Done |
 | Editor 2.0: formatting toolbar, colours and highlights, themes and fonts, AI rephrase | ✅ Done |
-| **M4 Personal sign-in, "My notes" / "Shared with me", private / view / edit links** | ⏭ Next |
-| M5 Version history, image paste, Mermaid diagrams | Later |
+| M4 Personal sign-in (email link + GitHub), "My notes" / "Shared with me", private / view / edit links | ✅ Done |
+| **M5 Version history, image paste, Mermaid diagrams** | ⏭ Next |
 | M6 Load testing, backup restore drill, further hardening | Later |
 
 ## FAQ

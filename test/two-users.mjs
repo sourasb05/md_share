@@ -1,5 +1,5 @@
 // End-to-end: two independent browsers edit one note at the same time.
-// Usage: BASE=http://localhost:3000 [PASSWORD=group-password] node test/two-users.mjs
+// Usage: npm start (local mode, no sign-in), then: BASE=http://localhost:3000 node test/two-users.mjs
 import { chromium } from "playwright";
 import os from "node:os";
 const BASE = process.env.BASE || "http://localhost:3000";
@@ -9,14 +9,6 @@ const A = await (await browser.newContext({ viewport: { width: 1400, height: 820
 const B = await (await browser.newContext({ viewport: { width: 1400, height: 820 } })).newPage();
 const errors = [];
 for (const p of [A, B]) p.on("pageerror", (e) => errors.push(e.message));
-if (process.env.PASSWORD) { // server started with GROUP_PASSWORD: each person logs in
-  for (const p of [A, B]) {
-    await p.goto(`${BASE}/login`);
-    await p.fill("input[name=password]", process.env.PASSWORD);
-    await p.click("button[type=submit]");
-    await p.waitForURL(`${BASE}/`);
-  }
-}
 
 await A.goto(`${BASE}/new`);
 const url = A.url();

@@ -38,6 +38,7 @@
   <span class="bar-sep" aria-hidden="true"></span>
   <span id="title" class="title">Loading…</span>
   <span id="status" class="status warn">Connecting…</span>
+  <span id="role-badge" class="role-badge" hidden>View only</span>
   <div class="spacer"></div>
   <div class="presence"><span id="people"></span><span id="count" class="muted"></span></div>
   <input id="name" class="name" aria-label="Your name" maxlength="40">
@@ -49,7 +50,7 @@
   <button id="rephrase" class="ai-btn" title="Rephrase the selected text with AI" hidden><svg class="ic"><use href="#i-sparkle"/></svg><span>Rephrase</span></button>
   <button id="appearance-btn" class="ghost icon-btn aa" data-pop="pop-appearance" title="Appearance: fonts, size, theme" aria-haspopup="true" aria-expanded="false">Aa</button>
   <button id="download" class="ghost icon-btn" title="Download as .md"><svg class="ic"><use href="#i-download"/></svg></button>
-  <button id="share" class="primary">Share</button>
+  <button id="share" class="primary" data-pop="pop-share" aria-haspopup="true" aria-expanded="false">Share</button>
 </header>
 
 <div class="toolbar" role="toolbar" aria-label="Formatting">
@@ -82,6 +83,7 @@
   <span id="wordcount" class="wordcount" title="Words · characters"></span>
 </div>
 
+<div id="banner" class="banner" role="alert" hidden></div>
 <main data-mode="both">
   <section id="editor" class="pane editor-pane" aria-label="Markdown editor"></section>
   <section id="preview-wrap" class="pane preview-pane" aria-label="Preview"><article id="preview" class="markdown-body"></article></section>
@@ -110,6 +112,36 @@
     <button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="sepia">Paper</button><button data-v="dark">Dark</button></div></div>
   <div class="field"><span>Page width</span><div class="seg" id="ap-width" role="group" aria-label="Page width">
     <button data-v="narrow">Narrow</button><button data-v="wide">Wide</button></div></div>
+</div>
+
+<div id="pop-share" class="popover share" role="dialog" aria-label="Share this note" hidden>
+  <div class="pop-title">Share</div>
+  <div class="share-link">
+    <input id="share-url" readonly aria-label="Link to this note">
+    <button id="share-copy" class="small" type="button">Copy link</button>
+  </div>
+  <div id="share-owner-ui" hidden>
+    <label class="field" for="share-mode"><span>General access</span>
+      <select id="share-mode">
+        <option value="private">Only people added below</option>
+        <option value="link_view">Anyone signed in with the link can view</option>
+        <option value="link_edit">Anyone signed in with the link can edit</option>
+      </select>
+    </label>
+    <p class="small-note muted" id="share-domains"></p>
+    <form id="share-add" class="share-add">
+      <input id="share-email" type="email" placeholder="name@your-university.edu" aria-label="Email address to add" required>
+      <select id="share-role" aria-label="Role for this person">
+        <option value="viewer">Can view</option>
+        <option value="editor" selected>Can edit</option>
+        <option value="owner">Owner</option>
+      </select>
+      <button class="primary small" type="submit">Add</button>
+    </form>
+    <ul id="share-people" class="people-list" aria-label="People with access"></ul>
+  </div>
+  <p id="share-info" class="small-note muted"></p>
+  <p id="share-error" class="error small-note" role="alert" hidden></p>
 </div>
 
 <aside id="ai-panel" class="ai-panel" aria-label="AI rephrase" hidden>

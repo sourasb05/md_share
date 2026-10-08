@@ -4,7 +4,7 @@ import * as Y from "yjs";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { EditorView, basicSetup } from "codemirror";
 import { keymap, Decoration, MatchDecorator, ViewPlugin } from "@codemirror/view";
-import { EditorSelection, Prec } from "@codemirror/state";
+import { EditorSelection, EditorState, Compartment, Prec } from "@codemirror/state";
 import { indentWithTab } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -89,6 +89,10 @@ const colorMarks = ViewPlugin.fromClass(class {
   }
 }, { decorations: (p) => p.decorations });
 
+// Editing stays off until the server confirms this person may edit (viewers stay read-only)
+const editable = new Compartment();
+const editableExt = (on) => [EditorView.editable.of(on), EditorState.readOnly.of(!on)];
+
 const undoManager = new Y.UndoManager(ytext);
 const view = new EditorView({
   parent: $("#editor"),
@@ -101,6 +105,7 @@ const view = new EditorView({
     editorTheme,
     colorMarks,
     EditorView.lineWrapping,
+    editable.of(editableExt(false)),
     yCollab(ytext, awareness, { undoManager }),
   ],
 });
@@ -141,9 +146,9 @@ function render() {
 }
 ytext.observe(() => { if (!pending) { pending = true; requestAnimationFrame(render); } });
 
-// First load: seed an empty new note with a template
+// First load: seed an empty new note with a template (only people who may edit)
 provider.on("synced", () => {
-  if (ytext.length === 0 && !store.get(`seeded_${noteId}`)) {
+  if (provider.authorizedScope === "read-write" && ytext.length === 0 && !store.get(`seeded_${noteId}`)) {
     ytext.insert(0, "# Untitled note\n\nStart writing **Markdown** here. Math works too: $E = mc^2$ and\n\n$$\n\\nabla_\\theta \\mathcal{L}(\\theta) = \\frac{1}{n}\\sum_{i=1}^{n} \\nabla_\\theta \\ell(x_i, y_i; \\theta)\n$$\n");
     store.set(`seeded_${noteId}`, "1");
   }
@@ -165,8 +170,38 @@ provider.on("unsyncedChanges", ({ number }) => {
   if (number > 0) setStatus("Saving…", "warn");
   else setStatus("Saved", "ok");
 });
-provider.on("authenticationFailed", () => setStatus("Not allowed — log in again", "bad"));
-provider.on("close", ({ event }) => { if (event && event.code === 4401) location.href = `/login?next=${encodeURIComponent(location.pathname)}`; });
+// ---------- Access (the server decides; this only mirrors it in the UI) ----------
+let canEdit = false;
+function setEditable(on) {
+  canEdit = on;
+  view.dispatch({ effects: editable.reconfigure(editableExt(on)) });
+  document.body.dataset.readonly = String(!on);
+  $("#role-badge").hidden = on;
+  if (!on && !ai.panel.hidden) closeRephrase();
+}
+function showBanner(text) { const b = $("#banner"); b.textContent = text; b.hidden = !text; }
+function lostAccess(text) {
+  showBanner(text);
+  setEditable(false);
+  setStatus("No access", "bad");
+  provider.disconnect();
+}
+provider.on("authenticated", ({ scope }) => {
+  const wasEditable = canEdit;
+  setEditable(scope === "read-write");
+  showBanner("");
+  if (wasEditable && scope !== "read-write") flash("You can now only view this note");
+  else if (!wasEditable && scope === "read-write" && accessChanged) flash("You can now edit this note");
+  accessChanged = false;
+});
+let accessChanged = false;
+provider.on("authenticationFailed", () => lostAccess("You don't have access to this note any more. Ask its owner to share it with you."));
+provider.on("close", ({ event }) => {
+  const code = event?.code;
+  if (code === 4401) location.href = `/login?next=${encodeURIComponent(location.pathname)}`;
+  else if (code === 4403) lostAccess("Your access to this note was removed. Ask its owner to share it with you again.");
+  else if (code === 4409) accessChanged = true; // the provider reconnects and the server applies the new rights
+});
 
 // ---------- Presence (who is online) ----------
 const people = $("#people");
@@ -188,6 +223,14 @@ awareness.on("change", renderPeople);
 renderPeople();
 
 // ---------- Name ----------
+// Signed-in people start with their account name; anyone can still change how they appear
+if (!store.get("mdshare_name")) {
+  fetch("/api/me").then((r) => r.json()).then((me) => {
+    if (me.local || !me.name || store.get("mdshare_name")) return;
+    myName = me.name; nameInput.value = myName;
+    awareness.setLocalStateField("user", { name: myName, color: myColor, colorLight: myColor + "33" });
+  }).catch(() => {});
+}
 const nameInput = $("#name");
 nameInput.value = myName;
 nameInput.style.borderColor = myColor;
@@ -219,10 +262,6 @@ view.scrollDOM.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ---------- Buttons ----------
-$("#share").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(location.href); flash("Link copied"); }
-  catch { flash(location.href); }
-});
 $("#download").addEventListener("click", () => {
   const blob = new Blob([ytext.toString()], { type: "text/markdown" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${$("#title").textContent.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || noteId}.md` });
@@ -517,6 +556,78 @@ if (prefs) {
   }
 }
 $("#appearance-btn").addEventListener("click", (e) => togglePopover(e.currentTarget));
+
+// ---------- Share dialog ----------
+// Owners choose the link setting and add people by email; everyone else sees their own access.
+const share = {
+  pop: $("#pop-share"), url: $("#share-url"), mode: $("#share-mode"), people: $("#share-people"),
+  info: $("#share-info"), error: $("#share-error"), ownerUi: $("#share-owner-ui"), email: $("#share-email"), role: $("#share-role"),
+};
+const ROLE_TEXT = { viewer: "Can view", editor: "Can edit", owner: "Owner" };
+share.url.value = location.href;
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+  return data;
+}
+function shareError(msg) { share.error.textContent = msg || ""; share.error.hidden = !msg; }
+function renderShare(info) {
+  shareError("");
+  const isOwner = info.role === "owner" && !info.local;
+  share.ownerUi.hidden = !isOwner;
+  if (info.local) {
+    share.info.textContent = "Sign-in isn't set up on this server, so sharing with people is off. Anyone who can open MdShare here can open this link.";
+    return;
+  }
+  const domains = info.domains.map((d) => "@" + d).join(", ");
+  if (!isOwner) {
+    const owner = info.owner ? ` Owner: ${info.owner.email}.` : "";
+    share.info.textContent = `You can ${info.role === "viewer" ? "view" : "edit"} this note.${owner} Only owners can change who has access.`;
+    return;
+  }
+  share.info.textContent = "";
+  share.mode.value = info.share_mode;
+  $("#share-domains").textContent = `"Anyone signed in" means anyone with a ${domains} address.`;
+  share.email.placeholder = `name@${info.domains[0] || "your-university.edu"}`;
+  share.people.replaceChildren();
+  if (info.owner) {
+    const li = document.createElement("li");
+    li.append(Object.assign(document.createElement("span"), { className: "who", textContent: info.owner.email + (info.owner.you ? " (you)" : "") }),
+      Object.assign(document.createElement("span"), { className: "muted", textContent: "Owner" }));
+    share.people.append(li);
+  }
+  for (const m of info.members || []) {
+    const li = document.createElement("li");
+    const who = Object.assign(document.createElement("span"), { className: "who", textContent: m.email });
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", `Role for ${m.email}`);
+    for (const r of ["viewer", "editor", "owner"]) sel.append(new Option(ROLE_TEXT[r], r, false, r === m.role));
+    sel.addEventListener("change", () => api("PATCH", `/api/notes/${noteId}/members/${m.user_id}`, { role: sel.value })
+      .then(renderShare, (e) => shareError(e.message)));
+    const rm = Object.assign(document.createElement("button"), { type: "button", className: "ghost small", textContent: "Remove" });
+    rm.setAttribute("aria-label", `Remove ${m.email}`);
+    rm.addEventListener("click", () => api("DELETE", `/api/notes/${noteId}/members/${m.user_id}`)
+      .then((d) => (d.removed ? closePopover() : renderShare(d)), (e) => shareError(e.message)));
+    li.append(who, sel, rm);
+    share.people.append(li);
+  }
+}
+$("#share").addEventListener("click", (e) => {
+  togglePopover(e.currentTarget);
+  if (openPop === share.pop) api("GET", `/api/notes/${noteId}`).then(renderShare, (err) => shareError(err.message));
+});
+$("#share-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(location.href); flash("Link copied"); }
+  catch { share.url.select(); flash("Press Ctrl+C to copy"); }
+});
+share.mode.addEventListener("change", () => api("PUT", `/api/notes/${noteId}/share`, { share_mode: share.mode.value })
+  .then((d) => { renderShare(d); flash("Sharing updated"); }, (e) => shareError(e.message)));
+$("#share-add").addEventListener("submit", (e) => {
+  e.preventDefault();
+  api("POST", `/api/notes/${noteId}/members`, { email: share.email.value, role: share.role.value })
+    .then((d) => { share.email.value = ""; renderShare(d); flash("Added"); }, (err) => shareError(err.message));
+});
 
 // For tests / debugging
 window.__mdshare = { ytext, provider, view };

@@ -13,15 +13,13 @@ public later). The engineering plan is the source of truth for scope and milesto
   (no inline scripts).
 - Do not add dependencies without saying why. Keep plain JavaScript (ES modules) unless asked.
 - One milestone per session. Finish with `npm run build`, start the server, run
-  `node test/two-users.mjs`, and report the result.
+  `node test/two-users.mjs` and `node test/access.mjs`, and report the results.
 - Log important choices in DECISIONS.md.
 
-## Next milestone: M4 — personal sign-in, My Notes, sharing
-- Replace the shared group password with per-person sign-in (email magic link or university/GitHub
-  OAuth); keep an email allowlist so only the group can join.
-- Tables: users, note_members(note_id, user_id, role viewer|editor|owner); notes.owner_id, notes.share_mode
-  (private | link_view | link_edit).
-- Viewers connect read-only (Hocuspocus `connection.readOnly = true` in onAuthenticate/onConnect).
-- Home page: "My notes" and "Shared with me".
-- Done when: a logged-out browser cannot read a private note over HTTP or WebSocket, and a viewer's
-  edits are rejected — both covered by Playwright tests.
+## Done: M4 — personal sign-in, My Notes, sharing (2026-10-09)
+- Email magic link + GitHub OAuth, domain allowlist (`ALLOWED_DOMAINS`); local mode (no sign-in) when unset.
+- users, note_members, note_visits, login_tokens; notes.owner_id / share_mode. Viewers are read-only in onConnect.
+- Covered by `test/access.mjs` (signed-out access over HTTP + WebSocket, viewer edits rejected, live revocation).
+
+## Next milestone: M5 — version history, image paste, Mermaid diagrams
+- Scope and "done when" to be agreed with the user before starting (see the engineering plan).

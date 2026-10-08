@@ -3,13 +3,17 @@
   "version": "0.3.0",
   "description": "Shared real-time Markdown notes with LaTeX math (HackMD-style)",
   "license": "AGPL-3.0-or-later",
-  "repository": { "type": "git", "url": "git+https://github.com/sourasb05/md_share.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sourasb05/md_share.git"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node server.js",
     "dev": "node scripts/build.mjs && node server.js",
     "test": "node test/two-users.mjs",
     "test:security": "node test/security.mjs",
+    "test:access": "node test/access.mjs",
     "test:rephrase": "node test/rephrase.mjs",
     "test:formatting": "node test/formatting.mjs"
   },
@@ -21,6 +25,7 @@
     "express": "^5.2.1",
     "lib0": "^0.2.119",
     "nanoid": "^6.0.2",
+    "nodemailer": "^10.0.16",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.33"
   },

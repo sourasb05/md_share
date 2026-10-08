@@ -10,11 +10,22 @@
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body class="home-page">
-<header class="bar"><a class="brand" href="/"><span class="logo" aria-hidden="true">M↓</span>MdShare</a><div class="spacer"></div><a class="button primary" href="/new">New note</a><form method="post" action="/logout"><button type="submit">Log out</button></form></header>
+<header class="bar">
+  <a class="brand" href="/"><span class="logo" aria-hidden="true">M↓</span>MdShare</a>
+  <div class="spacer"></div>
+  <span id="me" class="user-chip" hidden></span>
+  <a class="button primary" href="/new">New note</a>
+  <form method="post" action="/logout" id="logout" hidden><button type="submit" class="ghost">Sign out</button></form>
+</header>
 <div class="home">
-  <h1>Notes</h1>
-  <p class="muted">Shared Markdown notes with live co-editing and LaTeX math. Anyone with a note's link can edit it.</p>
-  <ul id="notes" class="notes"><li class="muted">Loading…</li></ul>
+  <section aria-labelledby="mine-h">
+    <h1 id="mine-h">My notes</h1>
+    <ul id="mine" class="notes"><li class="muted">Loading…</li></ul>
+  </section>
+  <section aria-labelledby="shared-h">
+    <h2 id="shared-h">Shared with me</h2>
+    <ul id="shared" class="notes"><li class="muted">Loading…</li></ul>
+  </section>
   <p class="foot muted">MdShare is free software under the GNU AGPL-3.0 · <a href="https://github.com/sourasb05/md_share" rel="noopener">Source code</a></p>
 </div>
 <script type="module" src="/assets/home.js"></script>

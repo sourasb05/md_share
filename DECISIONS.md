@@ -52,3 +52,19 @@
   hosting or dual-license. All ~200 dependencies are permissive (MIT/ISC/BSD/Apache/MPL-or-Apache, fonts
   OFL-1.1) and AGPL-compatible. Home page links to the source code (AGPL §13). package.json stays
   "private" so it is never published to npm by accident.
+- 2026-10-09 — M4 personal sign-in, "My notes" / "Shared with me", private / view / edit links.
+  - Sign-in: email magic link AND GitHub OAuth (user's choice); access by email domain only (`ALLOWED_DOMAINS`,
+    subdomains included). GitHub accounts need a *verified* address at an allowed domain. Accounts are keyed by
+    email, so both methods reach the same account. No passwords stored. `GROUP_PASSWORD` removed.
+  - Magic links: 32-byte random token, only its SHA-256 stored, single use, 15 min. The emailed GET link shows a
+    confirm button and the POST consumes it, so mail scanners that prefetch links can't use them up.
+    Rate limits: 3 emails per address and 10 per IP per 15 min. Without SMTP_URL links are printed to the log.
+  - New dependency nodemailer (MIT-0, no sub-dependencies) to send sign-in emails over SMTP. GitHub OAuth uses
+    plain fetch (no dependency); GITHUB_OAUTH_URL / GITHUB_API_URL exist only so tests can use a fake GitHub.
+  - Access = max(owner, member role, link setting). Checked on every page/API route and in Hocuspocus onConnect;
+    viewers get `connectionConfig.readOnly = true`, so the server discards their updates. Sharing changes call
+    refreshConnections(): 4403 closes revoked editors, 4409 makes changed ones reconnect with new rights.
+  - Removing a domain from ALLOWED_DOMAINS invalidates its sessions (domain re-checked on every request).
+  - Migration: notes created before M4 have no owner and become link_edit (existing links keep working);
+    OWNER_FOR_EXISTING_NOTES hands them to one person. Old group sessions are dropped.
+  - Local mode (no ALLOWED_DOMAINS, loopback only): one implicit user, so trying it out needs no setup.
