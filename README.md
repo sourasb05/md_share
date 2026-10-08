@@ -16,6 +16,7 @@ at once, with LaTeX math that renders as you write. It runs on your own server, 
 [Why it helps](#why-it-helps) ·
 [Security](#security) ·
 [Product description](#product-description) ·
+[Installation](#installation) ·
 [Quick start](#quick-start) ·
 [Run it for your group](#run-it-for-your-group) ·
 [Keeping secrets out of git](#keeping-secrets-out-of-git) ·
@@ -170,9 +171,55 @@ instance with HTTPS, backups and updates), or roll it out across a department on
 
 ---
 
-## Quick start
+## Installation
 
-Requires **Node.js 20+**.
+MdShare needs **Node.js 20 or newer** (which includes `npm`) and **git**. Docker is only needed if you
+deploy with Docker on a server.
+
+### macOS
+
+Install [Homebrew](https://brew.sh) if you don't have it, then Node.js and git:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install node git
+```
+
+### Windows
+
+Install the LTS version of Node.js from [nodejs.org](https://nodejs.org) and [Git for Windows](https://git-scm.com/download/win),
+or from PowerShell:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+```
+
+Close and reopen the terminal afterwards so it finds the new commands.
+
+### Linux (Ubuntu / Debian)
+
+The `nodejs` package in the default repositories is often too old. Use NodeSource (or [nvm](https://github.com/nvm-sh/nvm)):
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs git
+```
+
+### Check it worked
+
+```bash
+node --version    # should print v20 or higher
+npm --version
+git --version
+```
+
+### Docker (servers only)
+
+For the Docker setup, install Docker Engine with the Compose plugin ([Linux guide](https://docs.docker.com/engine/install/))
+or [Docker Desktop](https://docs.docker.com/desktop/) on macOS and Windows. Check with `docker compose version`.
+
+## Quick start
 
 ```bash
 git clone https://github.com/sourasb05/md_share.git
@@ -183,7 +230,24 @@ npm start              # → http://localhost:3000
 ```
 
 Open the same note in two browser windows to see live co-editing. Without a password the server only listens on
-this computer (`127.0.0.1`), so nobody else on the network can reach it.
+this computer (`127.0.0.1`), so nobody else on the network can reach it. Stop the server with Ctrl+C.
+
+### Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| `command not found: node` / `'node' is not recognized` | Node.js isn't installed or the terminal was opened before installing. Install it (above) and open a new terminal |
+| The page loads but the editor is blank | You skipped `npm run build`. Run it, then restart with `npm start` |
+| `EADDRINUSE: address already in use` | Something else uses port 3000. Start on another port: `PORT=3001 npm start` (Windows PowerShell: `$env:PORT=3001; npm start`) |
+| `GROUP_PASSWORD must be at least 12 characters.` | Choose a longer password |
+| `Refusing to listen on 0.0.0.0 without GROUP_PASSWORD` | Sharing on a network requires a password. Set `GROUP_PASSWORD` as shown below |
+| `npm install` fails while building `better-sqlite3` | Prebuilt files weren't available for your system. Install build tools and retry: macOS `xcode-select --install`, Ubuntu `sudo apt-get install -y build-essential python3`, Windows the "Desktop development with C++" workload of Visual Studio Build Tools |
+
+On **Windows PowerShell**, set variables like this instead of `NAME=value npm start`:
+
+```powershell
+$env:GROUP_PASSWORD='choose-a-long-password'; $env:HOST='0.0.0.0'; npm start
+```
 
 ## Run it for your group
 
