@@ -1,0 +1,13 @@
+services:
+  mdshare:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3000:3000"   # only reachable via the reverse proxy on this host
+    volumes:
+      - ./data:/data            # must be owned by uid 1000: sudo chown 1000:1000 data
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

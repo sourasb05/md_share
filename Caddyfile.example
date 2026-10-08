@@ -1,0 +1,4 @@
+# Caddy gets an HTTPS certificate automatically and passes WebSockets through.
+notes.your-group.example.org {
+    reverse_proxy 127.0.0.1:3000
+}

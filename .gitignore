@@ -1,0 +1,32 @@
+# --- Secrets: never commit these ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# --- Data: notes, sessions and the password fingerprint live here ---
+data/
+*.sqlite
+*.sqlite-*
+*.db
+backup*.sqlite
+
+# --- Dependencies and build output (recreated by npm install / npm run build) ---
+node_modules/
+public/editor.js
+public/home.js
+public/chunks/
+public/katex/
+public/fonts/
+
+# --- Test output, logs, local tooling ---
+/*.png
+test-results/
+*.log
+npm-debug.log*
+.DS_Store
+.claude/settings.local.json
+.vscode/
+.idea/

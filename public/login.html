@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in · MdShare</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/fonts/fonts.css">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="home-page">
+<form class="login" method="post">
+  <h1>MdShare</h1>
+  <p class="muted">Enter the group password.</p>
+  <input type="password" name="password" autocomplete="current-password" autofocus required aria-label="Group password">
+  <button class="primary" type="submit">Log in</button>
+  <p class="error" id="err" hidden>Wrong password.</p>
+</form>
+<script src="/assets/login.js"></script>
+</body>
+</html>

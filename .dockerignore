@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+node_modules
+data
+*.sqlite*
+public/chunks
+public/katex
+public/fonts
+public/editor.js
+public/home.js
+/*.png
+docs
+test-results
