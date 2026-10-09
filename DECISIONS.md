@@ -80,3 +80,7 @@
     test/backup.mjs rehearses backup → change → restore → verify (saved text and live Yjs document).
   - Docker: multi-stage build on node:24-trixie-slim; npm/corepack removed from the runtime image. The base-image
     scan went from 4 critical + 21 high to 0 critical + 9 high. Image build itself not yet tested (no Docker here).
+- 2026-10-09 — `main` protected with a repository ruleset ("Protect main"): changes only via pull request, CI jobs
+  `test (22)` and `test (24)` must pass, no force-push, no deletion. Repository admins may bypass in an emergency.
+  No approving review required (single maintainer). The first protected PR fixed a flaky sign-out test that had
+  made CI fail at random.

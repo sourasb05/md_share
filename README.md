@@ -413,6 +413,9 @@ npm run test:backup                 # backup → change → restore drill
 Every push runs all of these on GitHub Actions (Node 22 and 24); see the CI badge at the top. Dependabot opens
 weekly pull requests for outdated packages, GitHub Actions and the Docker base image.
 
+**Contributing:** `main` is protected. Make changes on a branch and open a pull request; it can be merged once
+the CI checks pass on Node 22 and 24. Force-pushes and deleting `main` are blocked.
+
 Design choices are logged in [DECISIONS.md](DECISIONS.md). [CLAUDE.md](CLAUDE.md) has the rules for AI coding
 assistants working on this project.
 
