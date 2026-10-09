@@ -119,7 +119,8 @@ const other = await (await browser.newContext()).newPage(); // the same person o
 await signInBrowser(other, BASE, srv, "ann@lab.test");
 await other.goto(`${BASE}/n/${id}`);
 await other.waitForFunction(() => window.__mdshare?.provider.isSynced);
-await page.evaluate(() => fetch("/logout", { method: "POST" }));
+// Don't await the reply inside the page: signing out makes the page navigate to /login straight away
+await page.evaluate(() => { fetch("/logout", { method: "POST" }); });
 await page.waitForURL("**/login**", { timeout: 5000 }).catch(() => {});
 check("signing out disconnects the open editor", page.url().includes("/login"), page.url());
 check("the person's other device stays connected", (await other.evaluate(() => window.__mdshare.provider.isSynced)) && !other.url().includes("/login"));
