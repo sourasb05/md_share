@@ -68,3 +68,15 @@
   - Migration: notes created before M4 have no owner and become link_edit (existing links keep working);
     OWNER_FOR_EXISTING_NOTES hands them to one person. Old group sessions are dropped.
   - Local mode (no ALLOWED_DOMAINS, loopback only): one implicit user, so trying it out needs no setup.
+- 2026-10-09 — Pilot readiness:
+  - CI (GitHub Actions, Node 22 + 24): npm audit (high+ fails), build, security, access, rephrase, backup drill,
+    two-person editing and formatting tests on every push/PR. No secrets needed (fake Claude and GitHub).
+    two-users.mjs now exits non-zero on failure so CI can catch it.
+  - Dependabot: weekly updates for npm, GitHub Actions and the Docker base image; security alerts and fixes on.
+    Private vulnerability reporting on (SECURITY.md points to it).
+  - GET /healthz (public, reveals only ok / database unavailable); Docker HEALTHCHECK uses it.
+  - scripts/backup.mjs: SQLite online backup (safe while running), integrity check, keep newest N.
+    scripts/restore.mjs: refuses while the port is in use or the file is damaged; keeps the old DB for undo.
+    test/backup.mjs rehearses backup → change → restore → verify (saved text and live Yjs document).
+  - Docker: multi-stage build on node:24-trixie-slim; npm/corepack removed from the runtime image. The base-image
+    scan went from 4 critical + 21 high to 0 critical + 9 high. Image build itself not yet tested (no Docker here).

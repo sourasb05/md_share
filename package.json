@@ -11,9 +11,12 @@
     "build": "node scripts/build.mjs",
     "start": "node server.js",
     "dev": "node scripts/build.mjs && node server.js",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
     "test": "node test/two-users.mjs",
     "test:security": "node test/security.mjs",
     "test:access": "node test/access.mjs",
+    "test:backup": "node test/backup.mjs",
     "test:rephrase": "node test/rephrase.mjs",
     "test:formatting": "node test/formatting.mjs"
   },

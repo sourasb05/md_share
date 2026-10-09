@@ -43,6 +43,8 @@ check("home redirects to sign-in", home.status === 302 && home.headers.get("loca
 check("note list needs sign-in", (await get("/api/notes")).status === 401);
 check("POST /api/notes needs sign-in", (await post("/api/notes", "", ORIGIN)).status === 401);
 check("WebSocket without sign-in rejected", (await tryWs({ Origin: BASE })) === "rejected");
+const health = await get("/healthz");
+check("health check is public and reveals nothing else", health.status === 200 && JSON.stringify(await health.json()) === '{"status":"ok"}');
 
 // 3. Sign-in requests
 check("outside address refused", (await post("/auth/email", "email=eve%40evil.test", ORIGIN)).headers.get("location").includes("error=domain"));

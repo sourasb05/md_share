@@ -276,6 +276,11 @@ app.get("/login", (req, res) => {
   res.sendFile(page("login.html"));
 });
 app.get("/api/auth/config", (req, res) => res.json({ local: LOCAL_MODE, domains: ALLOWED_DOMAINS, github: !!GITHUB_ID }));
+// For uptime monitors and Docker: answers only "is the server up and can it read its database?"
+const healthCheck = db.prepare("SELECT 1 AS ok");
+app.get("/healthz", (req, res) => {
+  try { healthCheck.get(); res.json({ status: "ok" }); } catch { res.status(503).json({ status: "database unavailable" }); }
+});
 
 // Magic link, step 1: email a one-time link
 app.post("/auth/email", async (req, res) => {

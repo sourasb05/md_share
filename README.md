@@ -1,5 +1,7 @@
 # MdShare
 
+[![CI](https://github.com/sourasb05/md_share/actions/workflows/ci.yml/badge.svg)](https://github.com/sourasb05/md_share/actions/workflows/ci.yml)
+
 > **Write the notes, the equations and the to-do list together, live.**
 
 MdShare is a shared notebook for research groups. Open a link and everyone types into the same page
@@ -136,7 +138,7 @@ flowchart LR
 **Not covered yet**
 
 - **Domain-wide trust.** Anyone with a verified address at an allowed domain can sign in and create notes. They can only see notes shared with them, but there is no admin panel yet to block one person (remove their sessions or narrow the domain list).
-- **No version history yet.** Back up the database file regularly.
+- **No version history yet.** Run the nightly backup (`npm run backup`) and copy it off the server.
 - **HTTPS is your hosting's job.** Use the included Caddy setup, and never expose MdShare on a network without HTTPS.
 - **Not yet independently audited or load-tested at scale.**
 
@@ -328,10 +330,39 @@ docker compose up -d --build
 Put it behind HTTPS (Caddy, nginx, or your department's reverse proxy). The proxy must pass WebSocket upgrades and
 the `Host` header through. A Caddy example is in [`Caddyfile.example`](Caddyfile.example).
 
-### Backups
+### Backups and restore
 
-All notes live in `data/mdshare.sqlite`. Copy it regularly, e.g. nightly with
-`sqlite3 data/mdshare.sqlite ".backup backup.sqlite"`. Store backups outside this repository.
+All notes, accounts and sharing settings live in `data/mdshare.sqlite`. Back it up every night:
+
+```bash
+npm run backup        # safe while the server runs; checks the copy; keeps the newest 14
+```
+
+Backups go to `data/backups/` (change with `BACKUP_DIR`, keep more with `BACKUP_KEEP`). **Also copy that folder to
+another machine** (rsync, rclone, your university's storage): a backup on the same disk won't survive the disk.
+
+Run it nightly with cron (`crontab -e`):
+
+```cron
+15 3 * * * cd /path/to/md_share && /usr/bin/env node scripts/backup.mjs >> data/backup.log 2>&1
+```
+
+With Docker: `15 3 * * * docker compose -f /path/to/md_share/docker-compose.yml exec -T mdshare node scripts/backup.mjs`
+
+To restore, stop the server, then:
+
+```bash
+npm run restore -- data/backups/mdshare-2026-10-09_03-15-00-000.sqlite --yes
+```
+
+The current database is kept as `mdshare.sqlite.before-restore-…`, so a restore can be undone. The restore
+script refuses to run while the server is up, and refuses damaged backups. `npm run test:backup` rehearses the
+whole cycle (back up a live server → change notes → restore → check).
+
+### Health check
+
+`GET /healthz` returns `{"status":"ok"}` when the server can read its database (HTTP 503 otherwise). Point an
+uptime monitor at `https://your-address/healthz`. The Docker image uses it as its health check.
 
 ## Keeping secrets out of git
 
@@ -376,7 +407,11 @@ npm run test:formatting             # toolbar, colours, highlights, appearance (
 npm run test:access                 # sign-in, sharing, viewers can't edit (46 checks, own server + fake GitHub)
 npm run test:security               # starts its own server and tries to break in (37 checks)
 npm run test:rephrase               # AI rephrase against a fake Claude API (no key, no cost)
+npm run test:backup                 # backup → change → restore drill
 ```
+
+Every push runs all of these on GitHub Actions (Node 22 and 24); see the CI badge at the top. Dependabot opens
+weekly pull requests for outdated packages, GitHub Actions and the Docker base image.
 
 Design choices are logged in [DECISIONS.md](DECISIONS.md). [CLAUDE.md](CLAUDE.md) has the rules for AI coding
 assistants working on this project.

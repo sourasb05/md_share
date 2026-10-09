@@ -42,3 +42,7 @@ await A.screenshot({ path: `${shots}/alice.png` });
 await B.screenshot({ path: `${shots}/bob.png` });
 console.log(JSON.stringify({ url, results, errors, text: ta }, null, 2));
 await browser.close();
+// Fail (for CI) unless both people ended up with the same text, typed by both, with math and cursors working
+const ok = results.converged && results.hasAlice && results.hasBob && results.katexRendered >= 2 && results.remoteCursorOnA >= 1 && errors.length === 0;
+console.log(ok ? "PASS  two people edited one note at once" : "FAIL  two-person editing (see above)");
+process.exit(ok ? 0 : 1);

@@ -7,12 +7,18 @@ import path from "node:path";
 
 export function tempDir(prefix) { return fs.mkdtempSync(path.join(os.tmpdir(), prefix)); }
 
+// Never leave a server running behind a test that crashed or failed
+const children = new Set();
+process.on("exit", () => { for (const c of children) c.kill(); });
+
 // Resolves once the server is listening; rejects with its output if it exits first
 export function startServer(env) {
   const p = spawn(process.execPath, ["server.js"], {
     env: { ...process.env, ANTHROPIC_API_KEY: "", SMTP_URL: "", GITHUB_CLIENT_ID: "", GITHUB_CLIENT_SECRET: "", ALLOWED_DOMAINS: "", ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  children.add(p);
+  p.on("exit", () => children.delete(p));
   let out = "";
   const srv = {
     proc: p,
