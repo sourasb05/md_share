@@ -15,6 +15,8 @@ public later). The engineering plan is the source of truth for scope and milesto
 - One milestone per session. Finish with `npm run build`, start the server, run
   `node test/two-users.mjs` and `node test/access.mjs`, and report the results.
 - Log important choices in DECISIONS.md.
+- `main` is protected: work on a branch, open a pull request, and merge only after the CI jobs
+  `test (22)` and `test (24)` pass. Never force-push or push directly to `main`.
 
 ## Done: M4 — personal sign-in, My Notes, sharing (2026-10-09)
 - Email magic link + GitHub OAuth, domain allowlist (`ALLOWED_DOMAINS`); local mode (no sign-in) when unset.
